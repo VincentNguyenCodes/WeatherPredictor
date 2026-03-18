@@ -1,13 +1,13 @@
 # San Jose Weather Predictor
 
-A full-stack weather prediction application that uses a PyTorch neural network trained on 11 years of historical San Jose, CA temperature data (2015–2025) to forecast high and low temperatures for the upcoming week and any arbitrary future date.
+A full-stack weather prediction application that uses a PyTorch neural network trained on 12 years of historical San Jose, CA temperature data (2015–2026) to forecast high and low temperatures for the upcoming week and any arbitrary future date.
 
 ---
 
 ## Features
 
 - **Real-time today** — today's high/low is pulled live from the Open-Meteo API (no key required), not predicted
-- **6-day model forecast** — days 1–6 predicted by WeatherNet, seeded with today's real temps so no predictions build on predictions
+- **6-day model forecast** — days 1–6 predicted by WeatherNet, seeded with the last 7 days of real observed temps fetched live from the API — no predictions ever build on other predictions
 - **Daily actuals pipeline** — `python manage.py update_actuals` fetches yesterday's confirmed temps and writes them to the CSV, keeping training data current
 - **Date lookup** — predict the high/low for any date by typing it in
 - **Transparent predictions** — each forecast shows which historical years it was based on
