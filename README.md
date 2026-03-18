@@ -7,7 +7,7 @@ A full-stack weather prediction application that uses a PyTorch neural network t
 ## Features
 
 - **Real-time today** - today's high/low is pulled live from the Open-Meteo API (no key required), not predicted
-- **6-day model forecast** - days 1–6 predicted by WeatherNet, seeded with the last 7 days of real observed temps fetched live from the API - no predictions ever build on other predictions
+- **6-day model forecast** - days 1–6 predicted by WeatherNet, seeded with the last 7 days of real observed temps fetched live from the API. No predictions ever build on other predictions.
 - **Daily actuals pipeline** - `python manage.py update_actuals` fetches yesterday's confirmed temps and writes them to the CSV, keeping training data current
 - **Date lookup** - predict the high/low for any date by typing it in
 - **Transparent predictions** - each forecast shows which historical years it was based on
@@ -55,8 +55,8 @@ A full-stack weather prediction application that uses a PyTorch neural network t
 | Same-day historical temps (normalized) | 14 | tmax + tmin for the same calendar date across the past 7 years, divided by 100 |
 | Presence flags | 7 | 1 if historical data exists for that year slot, 0 otherwise |
 | Sequential prior days (normalized) | 14 | tmax + tmin from the 7 days immediately preceding the target date, divided by 100 |
-| Temperature deltas | 2 | (yesterday − 2 days ago) for tmax and tmin - captures warming/cooling trend |
-| 7-day rolling precipitation | 1 | Sum of prior 7 days of precipitation, normalized - wet/dry streaks affect temps |
+| Temperature deltas | 2 | (yesterday − 2 days ago) for tmax and tmin; captures the warming/cooling trend |
+| 7-day rolling precipitation | 1 | Sum of prior 7 days of precipitation, normalized; wet/dry streaks affect temps |
 | Cyclical day-of-year | 2 | sin and cos encoding of day-of-year (captures seasonal patterns) |
 
 **Output:** tmax, tmin (°F) for the target date
@@ -208,7 +208,7 @@ python src/evaluate.py
 ## Update Daily Actuals
 
 Run this each day to append yesterday's confirmed temperatures to the CSV.
-The API auto-reloads data on next request - no server restart needed.
+The API auto-reloads data on next request, so no server restart is needed.
 
 ```bash
 cd backend
@@ -266,7 +266,7 @@ Each CSV in `data/` follows this schema:
 The current implementation runs on a single server and retrains on every request. Here's how it would evolve to handle 100k+ users across multiple cities:
 
 ### Bottleneck 1 - Single city, single model
-**Problem:** WeatherNet is trained on San Jose data only. Generalizing to more cities requires a new model per city - which doesn't scale.
+**Problem:** WeatherNet is trained on San Jose data only. Generalizing to more cities requires a new model per city, which doesn't scale.
 
 **Solution:**
 - Train a **shared global model** with city as an additional input feature (latitude, longitude, elevation, climate zone one-hot).
@@ -279,13 +279,13 @@ The current implementation runs on a single server and retrains on every request
 **Solution:**
 - Schedule a nightly **Celery + Redis** job that fetches yesterday's actuals from Open-Meteo, appends to the dataset, and retrains the model.
 - Version model weights with timestamps and keep the last 3 versions for rollback.
-- Compare new model MAE against the current deployed model before promoting - only deploy if it improves or holds steady.
+- Compare new model MAE against the current deployed model before promoting. Only deploy if the new model improves or holds steady.
 
 ### Bottleneck 3 - No uncertainty quantification
 **Problem:** The model returns a single point prediction (e.g., 72°F) with no confidence interval. Real forecasting systems communicate uncertainty.
 
 **Solution:**
-- Replace the single MLP output with a **Monte Carlo Dropout** inference pass - run the same input through the model N times with dropout enabled, report the mean and standard deviation as a confidence range.
+- Replace the single MLP output with a **Monte Carlo Dropout** inference pass: run the same input through the model N times with dropout enabled and report the mean and standard deviation as a confidence range.
 - Surface this in the UI: "High: 72°F ± 4°F" instead of just "72°F."
 
 ### Bottleneck 4 - Synchronous prediction on every request
