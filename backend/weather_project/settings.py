@@ -124,5 +124,5 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-DATA_DIR = BASE_DIR.parent / 'data'
+DATA_DIR = BASE_DIR / 'data'
 MODEL_PATH = BASE_DIR / 'weather' / 'ml' / 'model_weights.pth'
