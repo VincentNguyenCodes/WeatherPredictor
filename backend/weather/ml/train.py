@@ -1,20 +1,3 @@
-"""
-Train WeatherNet on historical San Jose weather data and save weights.
-
-Features per sample:
-  - Same-day temps (tmax, tmin) from up to 7 prior years, normalized  [14 values]
-  - Presence flags for each historical year slot                       [ 7 values]
-  - Sequential temps from the 7 days immediately before, normalized   [14 values]
-  - Temperature deltas (tmax_delta, tmin_delta)                       [ 2 values]
-  - 7-day rolling precipitation sum, normalized                       [ 1 value ]
-  - Cyclical day-of-year encoding (sin, cos)                          [ 2 values]
-  Total: 40 input features → 2 outputs (tmax, tmin)
-
-Usage:
-    python backend/weather/ml/train.py
-    python backend/weather/ml/train.py --data-dir data/ --epochs 1000
-"""
-
 import argparse
 import csv
 import math
@@ -26,12 +9,13 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from model import WeatherNet, build_features, HIST_YEARS, SEQ_DAYS
 
-DEFAULT_DATA_DIR  = Path(__file__).resolve().parents[2] / "data"
-DEFAULT_MODEL_OUT = Path(__file__).resolve().parent / "model_weights.pth"
+DEFAULT_DATA_DIR   = Path(__file__).resolve().parents[2] / "data"
+DEFAULT_MODEL_OUT  = Path(__file__).resolve().parent / "model_weights.pth"
+DEFAULT_REPORT_OUT = Path(__file__).resolve().parent / "training_report.md"
+TEST_SPLIT_OUT     = Path(__file__).resolve().parent / "test_split.pt"
 
 
 def load_data(data_dir: Path) -> dict:
-    """Return {year: {day_of_year: (tmax, tmin, precip)}}"""
     all_data: dict = {}
     for csv_file in sorted(data_dir.glob("SanJoseWeather*.csv")):
         with open(csv_file, newline="") as f:
@@ -52,7 +36,7 @@ def build_dataset(all_data: dict):
 
     for y_idx, target_year in enumerate(years):
         if y_idx == 0:
-            continue  # need at least one historical year
+            continue
         past_years = years[:y_idx]
 
         for doy, (tmax_t, tmin_t, _) in sorted(all_data[target_year].items()):
@@ -81,43 +65,111 @@ def build_dataset(all_data: dict):
     return X, y
 
 
-def train(data_dir: Path, output_path: Path, epochs: int, lr: float):
+def split_data(X, y, train_frac=0.6, val_frac=0.2, seed=42):
+    n = len(X)
+    idx = torch.randperm(n, generator=torch.Generator().manual_seed(seed))
+    n_train = int(n * train_frac)
+    n_val   = int(n * val_frac)
+    train_idx = idx[:n_train]
+    val_idx   = idx[n_train:n_train + n_val]
+    test_idx  = idx[n_train + n_val:]
+    return (
+        X[train_idx], y[train_idx],
+        X[val_idx],   y[val_idx],
+        X[test_idx],  y[test_idx],
+    )
+
+
+def train(data_dir: Path, output_path: Path, report_path: Path, epochs: int, lr: float):
     print(f"Loading data from {data_dir} ...")
     all_data = load_data(data_dir)
     years = sorted(all_data.keys())
-    print(f"  Years: {years[0]}–{years[-1]}")
+    print(f"  Years: {years[0]}-{years[-1]}")
 
     X, y = build_dataset(all_data)
-    print(f"  Training samples: {len(X)}")
+    print(f"  Total samples: {len(X)}")
 
-    loader  = DataLoader(TensorDataset(X, y), batch_size=64, shuffle=True)
+    X_train, y_train, X_val, y_val, X_test, y_test = split_data(X, y)
+    print(f"  Train: {len(X_train)}  Val: {len(X_val)}  Test: {len(X_test)}")
+
+    torch.save({'X': X_test, 'y': y_test}, TEST_SPLIT_OUT)
+    print(f"  Test split saved -> {TEST_SPLIT_OUT}")
+
+    train_loader = DataLoader(TensorDataset(X_train, y_train), batch_size=64, shuffle=True)
+    val_loader   = DataLoader(TensorDataset(X_val, y_val),     batch_size=64, shuffle=False)
+
     model   = WeatherNet()
     opt     = torch.optim.Adam(model.parameters(), lr=lr)
     loss_fn = nn.HuberLoss()
 
+    history = []
     print(f"Training for {epochs} epochs ...")
+
     for epoch in range(1, epochs + 1):
-        total = 0.0
-        for xb, yb in loader:
+        model.train()
+        train_loss = 0.0
+        for xb, yb in train_loader:
             pred = model(xb)
             loss = loss_fn(pred, yb)
             opt.zero_grad()
             loss.backward()
             opt.step()
-            total += loss.item()
-        if epoch % 200 == 0:
-            print(f"  Epoch {epoch:5d}  loss={total / len(loader):.4f}")
+            train_loss += loss.item()
+        train_loss /= len(train_loader)
+
+        if epoch % 100 == 0:
+            model.eval()
+            val_loss = 0.0
+            with torch.no_grad():
+                for xb, yb in val_loader:
+                    val_loss += loss_fn(model(xb), yb).item()
+            val_loss /= len(val_loader)
+            history.append((epoch, train_loss, val_loss))
+            print(f"  Epoch {epoch:5d}  train={train_loss:.4f}  val={val_loss:.4f}")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(model.state_dict(), output_path)
-    print(f"Saved model weights → {output_path}")
+    print(f"Saved model weights -> {output_path}")
+
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(report_path, 'w') as f:
+        f.write("# WeatherNet Training Report\n\n")
+
+        f.write("## Data Split\n\n")
+        f.write("| Split | Samples |\n|---|---|\n")
+        f.write(f"| Train (60%) | {len(X_train)} |\n")
+        f.write(f"| Validation (20%) | {len(X_val)} |\n")
+        f.write(f"| Test (20%) | {len(X_test)} |\n\n")
+
+        f.write("## Training Configuration\n\n")
+        f.write("| Parameter | Value |\n|---|---|\n")
+        f.write(f"| Epochs | {epochs} |\n")
+        f.write(f"| Learning rate | {lr} |\n")
+        f.write("| Batch size | 64 |\n")
+        f.write("| Loss function | HuberLoss |\n")
+        f.write("| Optimizer | Adam |\n\n")
+
+        f.write("## Loss History\n\n")
+        f.write("| Epoch | Train Loss | Val Loss |\n|---|---|---|\n")
+        for ep, tl, vl in history:
+            f.write(f"| {ep} | {tl:.4f} | {vl:.4f} |\n")
+
+        final_train = history[-1][1]
+        final_val   = history[-1][2]
+        f.write("\n## Final Results\n\n")
+        f.write("| Metric | Value |\n|---|---|\n")
+        f.write(f"| Final train loss | {final_train:.4f} |\n")
+        f.write(f"| Final val loss | {final_val:.4f} |\n")
+
+    print(f"Report saved -> {report_path}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train the WeatherNet model")
+    parser = argparse.ArgumentParser()
     parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
     parser.add_argument("--output",   type=Path, default=DEFAULT_MODEL_OUT)
+    parser.add_argument("--report",   type=Path, default=DEFAULT_REPORT_OUT)
     parser.add_argument("--epochs",   type=int,  default=1000)
     parser.add_argument("--lr",       type=float, default=1e-3)
     args = parser.parse_args()
-    train(args.data_dir, args.output, args.epochs, args.lr)
+    train(args.data_dir, args.output, args.report, args.epochs, args.lr)
