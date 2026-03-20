@@ -108,7 +108,7 @@ MSE penalizes large errors quadratically, causing the model to over-prioritize r
 | Samples | ~2,700 | 3,729 | 27,470 |
 | Loss function | MSE | HuberLoss | HuberLoss |
 | Optimizer | Adam | Adam | Adam (weight_decay=1e-4) |
-| Early stopping | No | No | Yes (patience=50, stopped epoch 222) |
+| Early stopping | No | No | Yes (patience=50, stopped epoch 234) |
 | Historical years | 5 | 7 | 7 |
 | Sequential days | 3 | 7 | 7 (recency weighted) |
 | Input features | 23 | 40 | 40 |
@@ -118,10 +118,10 @@ MSE penalizes large errors quadratically, causing the model to over-prioritize r
 | Metric | v2 | v3 | Change |
 |---|---|---|---|
 | Dataset size | 3,729 | 27,470 | +636% |
-| Epochs trained | 1000 | 222 | -778 |
-| Final train loss | 1.8390 | 2.6400 | higher (less memorization) |
-| Final CV loss | 3.0590 | 2.6075 | -0.4515 |
-| Train/CV gap | 1.2200 | 0.0325 | -1.1875 |
+| Epochs trained | 1000 | 234 | -766 |
+| Final train loss | 1.8390 | 2.5654 | higher (less memorization) |
+| Final CV loss | 3.0590 | 2.5855 | -0.4735 |
+| Train/CV gap | 1.2200 | 0.0201 | -1.1999 |
 
 ### Test Set Accuracy Comparison
 
@@ -131,6 +131,6 @@ All versions evaluated using the same hold-out methodology: tested on completely
 |---|---|---|---|---|
 | v1 | 4.61°F | 3.45°F | 6.00°F | 4.38°F |
 | v2 | 4.53°F | 2.94°F | 5.81°F | 3.89°F |
-| v3 | 3.72°F | 2.56°F | 4.96°F | 3.34°F |
+| v3 | 3.94°F | 2.45°F | 5.24°F | 3.22°F |
 | Baseline (same-day average) | 5.31°F | 3.83°F | 6.81°F | 4.94°F |
 

@@ -64,8 +64,8 @@ A full-stack weather prediction application that uses a PyTorch neural network t
 **Training:** Adam optimizer (weight decay 1e-4), Huber loss, early stopping (patience 50), batch size 64, trained on 76 years of data (1950-2026)
 
 **Hold-out accuracy (tested on 2023-2025, never seen during training):**
-- MAE High: **3.72°F** vs baseline 5.31°F
-- MAE Low: **2.56°F** vs baseline 3.83°F
+- MAE High: **3.94°F** vs baseline 5.31°F
+- MAE Low: **2.45°F** vs baseline 3.83°F
 
 See [`docs/model-history.md`](docs/model-history.md) for full model history and version comparisons.
 

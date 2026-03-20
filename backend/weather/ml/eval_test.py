@@ -8,7 +8,7 @@ from model import WeatherNet
 
 MODEL_PATH     = Path(__file__).resolve().parent / "model_weights.pth"
 TEST_SPLIT_PATH = Path(__file__).resolve().parent / "test_split.pt"
-REPORT_PATH    = Path(__file__).resolve().parents[3] / "docs" / "accuracy-report.md"
+REPORT_PATH    = Path(__file__).resolve().parent / "training-report.md"
 
 
 def mae_rmse(preds, actuals):
