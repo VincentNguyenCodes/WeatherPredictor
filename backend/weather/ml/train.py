@@ -32,7 +32,7 @@ def load_data(data_dir: Path) -> dict:
 
 def build_dataset(all_data: dict):
     years = sorted(all_data.keys())
-    features, targets = [], []
+    features, targets, sample_years = [], [], []
 
     for y_idx, target_year in enumerate(years):
         if y_idx == 0:
@@ -59,20 +59,18 @@ def build_dataset(all_data: dict):
 
             features.append(build_features(same_day, recent, doy, precip_seq).tolist())
             targets.append([tmax_t, tmin_t])
+            sample_years.append(target_year)
 
     X = torch.tensor(features, dtype=torch.float32)
     y = torch.tensor(targets,  dtype=torch.float32)
-    return X, y
+    return X, y, sample_years
 
 
-def split_data(X, y, train_frac=0.6, val_frac=0.2, seed=42):
-    n = len(X)
-    idx = torch.randperm(n, generator=torch.Generator().manual_seed(seed))
-    n_train = int(n * train_frac)
-    n_val   = int(n * val_frac)
-    train_idx = idx[:n_train]
-    val_idx   = idx[n_train:n_train + n_val]
-    test_idx  = idx[n_train + n_val:]
+def split_data(X, y, sample_years, train_end=1995, val_end=2010):
+    years_t = torch.tensor(sample_years)
+    train_idx = (years_t <= train_end).nonzero(as_tuple=True)[0]
+    val_idx   = ((years_t > train_end) & (years_t <= val_end)).nonzero(as_tuple=True)[0]
+    test_idx  = (years_t > val_end).nonzero(as_tuple=True)[0]
     return (
         X[train_idx], y[train_idx],
         X[val_idx],   y[val_idx],
@@ -86,10 +84,10 @@ def train(data_dir: Path, output_path: Path, report_path: Path, epochs: int, lr:
     years = sorted(all_data.keys())
     print(f"  Years: {years[0]}-{years[-1]}")
 
-    X, y = build_dataset(all_data)
+    X, y, sample_years = build_dataset(all_data)
     print(f"  Total samples: {len(X)}")
 
-    X_train, y_train, X_val, y_val, X_test, y_test = split_data(X, y)
+    X_train, y_train, X_val, y_val, X_test, y_test = split_data(X, y, sample_years)
     print(f"  Train: {len(X_train)}  Val: {len(X_val)}  Test: {len(X_test)}")
 
     torch.save({'X': X_test, 'y': y_test}, TEST_SPLIT_OUT)
@@ -155,10 +153,10 @@ def train(data_dir: Path, output_path: Path, report_path: Path, epochs: int, lr:
         f.write("# WeatherNet Training Report\n\n")
 
         f.write("## Data Split\n\n")
-        f.write("| Split | Samples |\n|---|---|\n")
-        f.write(f"| Train (60%) | {len(X_train)} |\n")
-        f.write(f"| Validation (20%) | {len(X_val)} |\n")
-        f.write(f"| Test (20%) | {len(X_test)} |\n\n")
+        f.write("| Split | Years | Samples |\n|---|---|---|\n")
+        f.write(f"| Train | 1950-1995 | {len(X_train)} |\n")
+        f.write(f"| Validation | 1996-2010 | {len(X_val)} |\n")
+        f.write(f"| Test | 2011-2026 | {len(X_test)} |\n\n")
 
         f.write("## Training Configuration\n\n")
         f.write("| Parameter | Value |\n|---|---|\n")
