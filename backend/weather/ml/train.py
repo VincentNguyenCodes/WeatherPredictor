@@ -11,7 +11,7 @@ from model import WeatherNet, build_features, HIST_YEARS, SEQ_DAYS
 
 DEFAULT_DATA_DIR   = Path(__file__).resolve().parents[2] / "data"
 DEFAULT_MODEL_OUT  = Path(__file__).resolve().parent / "model_weights.pth"
-DEFAULT_REPORT_OUT = Path(__file__).resolve().parent / "training_report.md"
+DEFAULT_REPORT_OUT = Path(__file__).resolve().parents[2] / "docs" / "training_report.md"
 TEST_SPLIT_OUT     = Path(__file__).resolve().parent / "test_split.pt"
 
 
