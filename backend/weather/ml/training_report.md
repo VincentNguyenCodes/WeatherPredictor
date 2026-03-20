@@ -111,3 +111,13 @@
 The train/CV gap dropped from 1.22 to 0.03, meaning the model is no longer memorizing the training data. CV loss improved by 0.45 despite training for far fewer epochs.
 
 Test set evaluation has not been run yet.
+
+## Test Set Results
+
+| Metric | Value |
+|---|---|
+| Test samples | 5494 |
+| MAE tmax | 3.6525 F |
+| MAE tmin | 2.3914 F |
+| RMSE tmax | 4.7170 F |
+| RMSE tmin | 3.0857 F |
