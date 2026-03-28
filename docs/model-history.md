@@ -10,7 +10,7 @@
 Dataset expanded from 2015-2026 to 1950-2026 using the Open-Meteo historical archive API (free, no key required). Going from 3,729 to 27,470 samples is the single biggest factor in reducing overfitting. The model can no longer memorize the training set when the dataset is 7x larger.
 
 **2. Early stopping**
-Training now monitors cross validation loss each epoch and stops when it has not improved for 50 consecutive epochs, saving the best weights. Previously the model trained for all 1000 epochs even after CV loss started climbing, causing the train/CV gap to widen to 1.22. Stopped at epoch 222.
+Training now monitors cross validation loss each epoch and stops when it has not improved for 50 consecutive epochs, saving the best weights. Previously the model trained for all 1000 epochs even after CV loss started climbing, causing the train/CV gap to widen to 1.22. Stopped at epoch 234.
 
 **3. Weight decay (L2 regularization)**
 Added `weight_decay=1e-4` to the Adam optimizer. Penalizes large weights, discouraging the model from fitting noise in the training set.

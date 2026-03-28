@@ -100,7 +100,7 @@ See [`docs/model-history.md`](docs/model-history.md) for full model history and 
 │           ├── WeatherApp.js   # Forecast + Predict tabs
 │           └── WeatherApp.css
 ├── docs/
-│   └── accuracy-report.md
+│   └── model-history.md
 └── README.md
 ```
 
@@ -221,7 +221,7 @@ python manage.py update_actuals --date 2026-01-01 --end-date 2026-03-15
 
 > **Note:** Open-Meteo archive data has a 1–2 day delay, so running this for yesterday is reliable. Same-day actuals are fetched live by the forecast endpoint automatically.
 
-Trains a fresh hold-out model on 2015–2022, evaluates on 2023–2025, and prints MAE, RMSE, per-year breakdowns, worst predictions, and monthly error breakdown.
+Trains a fresh hold-out model on 1950–2022, evaluates on 2023–2025, and prints MAE, RMSE, per-year breakdowns, worst predictions, and monthly error breakdown.
 
 ## Fetch New Data
 
